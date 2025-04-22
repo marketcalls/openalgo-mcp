@@ -165,6 +165,45 @@ The OpenAlgo MCP implementation provides comprehensive API coverage including:
 
 The implementation uses FastMCP with SSE (Server-Sent Events) transport for real-time communication and includes proper error handling, logging, and parameter validation.
 
+## Server Implementation Details
+
+The OpenAlgo MCP Server is built using the FastMCP library and exposes OpenAlgo trading functionality through a comprehensive set of tools. It uses Server-Sent Events (SSE) as the primary transport mechanism for real-time communication.
+
+### Server Architecture
+
+- **Framework**: Uses FastMCP with Starlette for the web server
+- **Transport**: Server-Sent Events (SSE) for real-time bidirectional communication
+- **API Client**: Wraps the OpenAlgo API with appropriate error handling and logging
+- **Configuration**: Uses environment variables with command-line override capabilities
+
+### Available API Tools
+
+The server exposes over 15 trading-related tools, including:
+
+- **Order Management**: place_order, modify_order, cancel_order, get_order_status
+- **Advanced Orders**: place_basket_order, place_split_order, place_smart_order
+- **Market Data**: get_quote, get_depth, get_history, get_intervals
+- **Account Information**: get_funds, get_holdings, get_position_book, get_order_book, get_trade_book
+- **Symbol Information**: get_symbol_metadata, get_all_tickers
+
+## Client Implementation Details
+
+The Trading Assistant client provides a user-friendly interface to interact with the OpenAlgo platform through natural language. It uses OpenAI's language models to interpret user commands and invoke the appropriate trading functions.
+
+### Client Architecture
+
+- **Framework**: Uses Agno agent framework with OpenAI Chat models
+- **UI**: Rich console interface with custom styling for an enhanced terminal experience
+- **Symbol Helper**: Built-in utilities for correct symbol formatting across exchanges
+- **Error Handling**: Comprehensive exception handling with user-friendly feedback
+
+### Trading Assistant Capabilities
+
+- **Natural Language Interface**: Understands trading terminology and concepts
+- **Symbol Format Assistance**: Helps construct proper symbol formats for equities, futures, and options
+- **Data Presentation**: Formats market data in clean, readable formats
+- **Contextual Awareness**: Maintains conversation history to provide contextual responses
+
 ## Troubleshooting Guide
 
 ### Common Issues
@@ -199,6 +238,29 @@ If you see 403 Forbidden or authentication errors:
 2. **Verify API host**:
    - Make sure `OPENALGO_API_HOST` points to the correct endpoint
    - For testing, the default value `http://127.0.0.1:5000` should work if you're running OpenAlgo locally
+
+#### Client Issues
+
+1. **Silent failures in the client**:
+   - The client uses a SilentFilter for logging to provide a clean interface
+   - If you suspect issues, temporarily modify the logging configuration in `trading_agent.py`
+   - Check that the OpenAI API key is valid if you experience model generation failures
+
+## Acknowledgements and Credits
+
+This project is made possible by the following open-source projects and tools:
+
+### Core Technologies
+
+- **[OpenAlgo](https://github.com/marketcalls/openalgo)**: The powerful trading platform that powers all trading operations in this project
+
+- **[Model Context Protocol (MCP)](https://modelcontextprotocol.io/)**: The communication protocol that enables AI agents to use tools and APIs
+
+- **[Agno](https://github.com/agno-agi/agno)**: The agent framework used for building the trading assistant client
+
+### Inspiration
+
+This project was inspired by [Zerodha MCP](https://github.com/mtwn105/zerodha-mcp), which pioneered the use of Machine Conversation Protocol for trading applications. The OpenAlgo MCP project adapts and extends this concept for the OpenAlgo trading platform, with a focus on enhanced symbol handling, comprehensive trading operations, and a more user-friendly interface.
 
 #### Symbol Formatting Issues
 
