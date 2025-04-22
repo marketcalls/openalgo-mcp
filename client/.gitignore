@@ -1,0 +1,36 @@
+# Client-specific gitignore
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.cpython-312.pyc
+*.cpython-*.pyc
+trading_agent.cpython-312.pyc
+
+# Local environment files
+.env
+.env.local
+
+# Logs and debugging
+*.log
+*.log.*
+logs/
+
+# Client-specific temporary files
+*.tmp
+*.bak
+*.swp
+
+# Client session data
+.session/
+
+# API response caches
+.api_cache/
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Other
+.DS_Store

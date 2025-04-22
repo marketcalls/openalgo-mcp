@@ -1,0 +1,31 @@
+# Server-specific gitignore
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.cpython-312.pyc
+*.cpython-*.pyc
+sample.cpython-312.pyc
+server.cpython-312.pyc
+
+# Local environment files
+.env
+
+# Logs and debugging
+*.log
+*.log.*
+logs/
+
+# Server-specific temporary files
+*.tmp
+*.bak
+*.swp
+*.pid
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Other
+.DS_Store
