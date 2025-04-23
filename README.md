@@ -36,7 +36,7 @@ This bridge between OpenAlgo's trading capabilities and AI allows for a natural 
 ## Project Structure
 
 ```
-mcpserver/
+openalgo-mcp/
 ├── .env                 # Common environment configuration
 ├── .env.example         # Example configuration template
 ├── requirements.txt     # Common dependencies for both client and server
@@ -58,7 +58,7 @@ mcpserver/
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/openalgo-mcp.git
+git clone https://github.com/marketcalls/openalgo-mcp.git
 cd openalgo-mcp/mcpserver
 ```
 
