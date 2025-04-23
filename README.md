@@ -291,7 +291,4 @@ This project is licensed under the Apache-2.0 license - see the [LICENSE](LICENS
 - [OpenAlgo](https://openalgo.in/) for the powerful trading platform
 - [MCP (Machine Conversation Protocol)](https://github.com/lalalune/mcp) for the communication framework
 - [AGNO](https://github.com/AstroCorp/agno) for the AI agent infrastructure
-=======
-# openalgo-mcp
-openalgo-mcp
->>>>>>> e499efe061ea80029530aab1eeb2f78b49a03c8c
+
