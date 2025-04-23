@@ -1,7 +1,5 @@
 # OpenAlgo MCP - AI Trading Assistant
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 An AI-powered trading assistant platform for OpenAlgo, leveraging Machine Conversation Protocol (MCP) and Large Language Models to provide intelligent trading capabilities.
 
 ## Overview
@@ -38,19 +36,15 @@ This bridge between OpenAlgo's trading capabilities and AI allows for a natural 
 ## Project Structure
 
 ```
-mcpserver/
+openalgo-mcp/
 ├── .env                 # Common environment configuration
 ├── .env.example         # Example configuration template
 ├── requirements.txt     # Common dependencies for both client and server
 ├── LICENSE              # MIT License
 ├── server/              # MCP Server implementation
 │   ├── server.py        # OpenAlgo MCP server code
-│   ├── requirements.txt # Server-specific dependencies
-│   └── .env             # Server-specific configuration (optional)
 └── client/              # Client implementation
     ├── trading_agent.py # AI assistant client code
-    ├── requirements.txt # Client-specific dependencies
-    └── .env             # Client-specific configuration (optional)
 ```
 
 ## Installation Guide
@@ -64,7 +58,7 @@ mcpserver/
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/openalgo-mcp.git
+git clone https://github.com/marketcalls/openalgo-mcp.git
 cd openalgo-mcp/mcpserver
 ```
 
@@ -286,14 +280,11 @@ This will output additional information to help diagnose connection and API issu
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache-2.0 license - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-
+- This project was inspired by [Zerodha MCP](https://github.com/zerodha/zerodha-mcp), which is licensed under the Apache License 2.0. While no code has been directly copied, this project builds upon the concept and architecture introduced by Zerodha MCP.
 - [OpenAlgo](https://openalgo.in/) for the powerful trading platform
 - [MCP (Machine Conversation Protocol)](https://github.com/lalalune/mcp) for the communication framework
 - [AGNO](https://github.com/AstroCorp/agno) for the AI agent infrastructure
-=======
-# openalgo-mcp
-openalgo-mcp
->>>>>>> e499efe061ea80029530aab1eeb2f78b49a03c8c
+
