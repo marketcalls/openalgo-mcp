@@ -150,11 +150,29 @@ def get_history(symbol: str, exchange: str, interval: str, start_date: str, end_
 
 @mcp.tool()
 def get_intervals() -> str:
-    return str(client.intervals())
+    """Get available intervals for historical data."""
+    try:
+        logging.info("Getting available intervals")
+        result = client.intervals()
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting intervals: {str(e)}")
+        import traceback
+        logging.error(f"INTERVALS TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting intervals: {str(e)}"
 
 @mcp.tool()
 def get_symbol_metadata(symbol: str, exchange: str) -> str:
-    return str(client.symbol(symbol=symbol.upper(), exchange=exchange.upper()))
+    """Get metadata for a specific symbol."""
+    try:
+        logging.info(f"Getting metadata for {symbol.upper()} on {exchange.upper()}")
+        result = client.symbol(symbol=symbol.upper(), exchange=exchange.upper())
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting symbol metadata: {str(e)}")
+        import traceback
+        logging.error(f"SYMBOL METADATA TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting symbol metadata: {str(e)}"
 
 @mcp.tool()
 def get_all_tickers(exchange: str = None) -> str:
@@ -199,7 +217,16 @@ def get_funds() -> str:
 
 @mcp.tool()
 def get_orders() -> str:
-    return str(client.orders(strategy="Python"))
+    """Get all orders for the current strategy."""
+    try:
+        logging.info("Getting orders for strategy Python")
+        result = client.orders(strategy="Python")
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting orders: {str(e)}")
+        import traceback
+        logging.error(f"ORDERS TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting orders: {str(e)}"
 
 @mcp.tool()
 def modify_order(order_id: str, symbol: str, quantity: int, price: float, action: str = None, exchange: str = None, price_type: str = None, product: str = None, trigger_price: float = None, strategy: str = "Python") -> str:
@@ -248,46 +275,112 @@ def modify_order(order_id: str, symbol: str, quantity: int, price: float, action
 
 @mcp.tool()
 def cancel_order(order_id: str) -> str:
-    return str(client.cancelorder(order_id=order_id, strategy="Python"))
+    """Cancel a specific order by ID."""
+    try:
+        logging.info(f"Cancelling order {order_id}")
+        result = client.cancelorder(order_id=order_id, strategy="Python")
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error cancelling order: {str(e)}")
+        import traceback
+        logging.error(f"CANCEL ORDER TRACEBACK: {traceback.format_exc()}")
+        return f"Error cancelling order: {str(e)}"
 
 @mcp.tool()
 def cancel_all_orders() -> str:
-    return str(client.cancelallorder(strategy="Python"))
+    """Cancel all open orders for the current strategy."""
+    try:
+        logging.info("Cancelling all orders for strategy Python")
+        result = client.cancelallorder(strategy="Python")
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error cancelling all orders: {str(e)}")
+        import traceback
+        logging.error(f"CANCEL ALL ORDERS TRACEBACK: {traceback.format_exc()}")
+        return f"Error cancelling all orders: {str(e)}"
 
 @mcp.tool()
 def get_order_status(order_id: str) -> str:
-    return str(client.orderstatus(order_id=order_id, strategy="Python"))
+    """Get status of a specific order by ID."""
+    try:
+        logging.info(f"Getting status for order {order_id}")
+        result = client.orderstatus(order_id=order_id, strategy="Python")
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting order status: {str(e)}")
+        import traceback
+        logging.error(f"ORDER STATUS TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting order status: {str(e)}"
 
 @mcp.tool()
 def get_open_position(symbol: str, exchange: str, product: str) -> str:
-    return str(client.openposition(strategy="Python", symbol=symbol, exchange=exchange, product=product))
+    """Get details of an open position for a specific symbol."""
+    try:
+        logging.info(f"Getting open position for {symbol} on {exchange} with product {product}")
+        result = client.openposition(strategy="Python", symbol=symbol, exchange=exchange, product=product)
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting open position: {str(e)}")
+        import traceback
+        logging.error(f"OPEN POSITION TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting open position: {str(e)}"
 
 @mcp.tool()
 def close_all_positions() -> str:
-    return str(client.closeposition(strategy="Python"))
+    """Close all open positions for the current strategy."""
+    try:
+        logging.info("Closing all positions for strategy Python")
+        result = client.closeposition(strategy="Python")
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error closing all positions: {str(e)}")
+        import traceback
+        logging.error(f"CLOSE POSITIONS TRACEBACK: {traceback.format_exc()}")
+        return f"Error closing all positions: {str(e)}"
 
 @mcp.tool()
 def get_position_book() -> str:
-    return str(client.positionbook(strategy="Python"))
+    """Get details of all current positions."""
+    try:
+        logging.info("Getting position book")
+        result = client.positionbook()
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting position book: {str(e)}")
+        import traceback
+        logging.error(f"POSITION BOOK TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting position book: {str(e)}"
 
 @mcp.tool()
 def get_order_book() -> str:
-    return str(client.orderbook(strategy="Python"))
+    """Get details of all orders."""
+    try:
+        logging.info("Getting order book")
+        result = client.orderbook()
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting order book: {str(e)}")
+        import traceback
+        logging.error(f"ORDER BOOK TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting order book: {str(e)}"
 
 @mcp.tool()
 def get_trade_book() -> str:
-    return str(client.tradebook(strategy="Python"))
+    """Get details of all executed trades."""
+    try:
+        logging.info("Getting trade book")
+        result = client.tradebook()
+        return str(result)
+    except Exception as e:
+        logging.error(f"Error getting trade book: {str(e)}")
+        import traceback
+        logging.error(f"TRADE BOOK TRACEBACK: {traceback.format_exc()}")
+        return f"Error getting trade book: {str(e)}"
 
 @mcp.tool()
-def get_holdings(strategy: str = "Python") -> str:
-    """
-    Get holdings information.
-    
-    Args:
-        strategy: Strategy name (default: Python)
-    """
+def get_holdings() -> str:
     try:
-        result = client.holdings(strategy=strategy)
+        result = client.holdings()
         return str(result)
     except Exception as e:
         logging.error(f"Error fetching holdings: {str(e)}")
