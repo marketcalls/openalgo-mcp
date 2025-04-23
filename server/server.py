@@ -220,7 +220,7 @@ def get_orders() -> str:
     """Get all orders for the current strategy."""
     try:
         logging.info("Getting orders for strategy Python")
-        result = client.orders(strategy="Python")
+        result = client.orderbook()
         return str(result)
     except Exception as e:
         logging.error(f"Error getting orders: {str(e)}")
