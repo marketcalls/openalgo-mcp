@@ -43,12 +43,8 @@ mcpserver/
 ├── LICENSE              # MIT License
 ├── server/              # MCP Server implementation
 │   ├── server.py        # OpenAlgo MCP server code
-│   ├── requirements.txt # Server-specific dependencies
-│   └── .env             # Server-specific configuration (optional)
 └── client/              # Client implementation
     ├── trading_agent.py # AI assistant client code
-    ├── requirements.txt # Client-specific dependencies
-    └── .env             # Client-specific configuration (optional)
 ```
 
 ## Installation Guide
