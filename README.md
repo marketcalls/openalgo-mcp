@@ -287,7 +287,7 @@ This will output additional information to help diagnose connection and API issu
 This project is licensed under the Apache-2.0 license - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-
+- This project was inspired by [Zerodha MCP](https://github.com/zerodha/zerodha-mcp), which is licensed under the Apache License 2.0. While no code has been directly copied, this project builds upon the concept and architecture introduced by Zerodha MCP.
 - [OpenAlgo](https://openalgo.in/) for the powerful trading platform
 - [MCP (Machine Conversation Protocol)](https://github.com/lalalune/mcp) for the communication framework
 - [AGNO](https://github.com/AstroCorp/agno) for the AI agent infrastructure
