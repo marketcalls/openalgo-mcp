@@ -442,7 +442,55 @@ class TradingAssistant {
 
     parseMarkdown(content) {
         if (typeof marked !== 'undefined') {
-            return marked.parse(content);
+            // Configure marked for better table rendering
+            marked.setOptions({
+                gfm: true,  // GitHub Flavored Markdown
+                breaks: true,
+                tables: true,
+                headerIds: false
+            });
+            
+            // Process table-specific content for better formatting
+            let processedContent = content;
+            
+            // Fix malformed tables from GROQ responses
+            // Check for table-like content and ensure proper formatting
+            if (content.includes('|') && !content.includes('```')) {
+                const lines = content.split('\n');
+                const tableLines = [];
+                let inTable = false;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.startsWith('|') && line.endsWith('|')) {
+                        if (!inTable) {
+                            inTable = true;
+                            // If this is first line of table and next line isn't a separator, add one
+                            if (i + 1 < lines.length) {
+                                const nextLine = lines[i + 1].trim();
+                                if (!nextLine.includes('---') && !nextLine.includes('===')) {
+                                    // Count columns and create separator
+                                    const colCount = (line.match(/\|/g) || []).length - 1;
+                                    tableLines.push(line);
+                                    tableLines.push('|' + Array(colCount).fill(' --- |').join(''));
+                                    continue;
+                                }
+                            }
+                        }
+                        tableLines.push(line);
+                    } else if (inTable && line.includes('|')) {
+                        // Handle malformed table rows that don't start/end with |
+                        tableLines.push('|' + line + (line.endsWith('|') ? '' : '|'));
+                    } else if (line === '' && inTable) {
+                        inTable = false;
+                    } else {
+                        tableLines.push(line);
+                    }
+                }
+                processedContent = tableLines.join('\n');
+            }
+            
+            return marked.parse(processedContent);
         }
         return this.escapeHtml(content).replace(/\n/g, '<br>');
     }

@@ -424,6 +424,68 @@
 }
 
 /* Print Styles */
+/* Enhanced Table Styles for Chat Messages */
+.chat-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 0.9em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.chat-bubble th {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: var(--color-text-bright);
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.chat-bubble td {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Removed redundant border-bottom rule */
+
+.chat-bubble tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.chat-bubble tr:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Fixed width columns for specific data types */
+.chat-bubble table th:nth-child(1), 
+.chat-bubble table td:nth-child(1) {
+    min-width: 100px;
+}
+
+.chat-bubble table th:nth-child(3), 
+.chat-bubble table td:nth-child(3),
+.chat-bubble table th:nth-child(4), 
+.chat-bubble table td:nth-child(4) {
+    text-align: center;
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+    .chat-bubble table {
+        font-size: 0.8em;
+    }
+    
+    .chat-bubble th, 
+    .chat-bubble td {
+        padding: 6px 8px;
+    }
+}
+
 @media print {
     .sidebar-modern,
     .navbar-modern,
