@@ -10,6 +10,7 @@ from pathlib import Path
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from agno.models.openai import OpenAIChat
+from agno.models.groq import Groq
 from agno.agent import Agent
 from agno.tools.mcp import MCPTools
 from typing import Optional, Dict, List
@@ -58,7 +59,15 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 MCP_HOST = os.environ.get("MCP_HOST", "localhost")
 MCP_PORT = int(os.environ.get("MCP_PORT", "8001"))
 MCP_URL = f"http://{MCP_HOST}:{MCP_PORT}/sse"
-MODEL_NAME = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
+# LLM Provider settings
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai").lower()
+
+# OpenAI settings
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
+# GROQ settings
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-70b-versatile")
 
 # Store active WebSocket connections
 active_connections: Dict[str, WebSocket] = {}
@@ -319,8 +328,14 @@ Examples:
 # Limitations:
 You are not a financial advisor and should not provide investment advice. Your role is to ensure secure, efficient, and compliant account management.
 """,
-                model=OpenAIChat(
-                    id=MODEL_NAME
+                # Initialize the appropriate model with better error handling
+                model=(
+                    Groq(
+                        id=GROQ_MODEL,
+                        # Add more conservative timeout for GROQ
+                        timeout=60.0
+                    ) if LLM_PROVIDER == "groq" else 
+                    OpenAIChat(id=OPENAI_MODEL)
                 ),
                 add_history_to_messages=True,
                 num_history_responses=10,
