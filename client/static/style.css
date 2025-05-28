@@ -424,77 +424,252 @@
 }
 
 /* Print Styles */
-/* Enhanced Table Styles for Chat Messages */
+/* Enhanced Table Styles for Chat Messages - Add to client/static/style.css */
+
+/* Improved table formatting in chat bubbles */
 .chat-bubble table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0;
-    font-size: 0.9em;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    margin: 12px 0;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chat-bubble th {
-    background-color: rgba(0, 0, 0, 0.3);
-    color: var(--color-text-bright);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+    color: white;
     font-weight: 600;
     text-align: left;
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 16px;
+    border: none;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .chat-bubble td {
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 16px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    vertical-align: middle;
+    font-size: 0.875rem;
 }
 
-/* Removed redundant border-bottom rule */
+.chat-bubble tr:last-child td {
+    border-bottom: none;
+}
 
 .chat-bubble tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 .chat-bubble tr:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease;
 }
 
-/* Fixed width columns for specific data types */
-.chat-bubble table th:nth-child(1), 
-.chat-bubble table td:nth-child(1) {
-    min-width: 100px;
-}
-
-.chat-bubble table th:nth-child(3), 
-.chat-bubble table td:nth-child(3),
-.chat-bubble table th:nth-child(4), 
-.chat-bubble table td:nth-child(4) {
-    text-align: center;
-}
-
-/* Responsive tables */
+/* Responsive table handling */
 @media (max-width: 768px) {
     .chat-bubble table {
-        font-size: 0.8em;
+        font-size: 0.75rem;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
     }
     
     .chat-bubble th, 
     .chat-bubble td {
-        padding: 6px 8px;
+        padding: 8px 12px;
+        min-width: 80px;
     }
 }
 
+/* Number formatting in tables */
+.chat-bubble td:has([data-type="currency"]),
+.chat-bubble td:has([data-type="number"]),
+.chat-bubble td[data-type="currency"],
+.chat-bubble td[data-type="number"] {
+    text-align: right;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-weight: 500;
+}
+
+/* Positive/Negative value styling */
+.chat-bubble .positive {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.chat-bubble .negative {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.chat-bubble .neutral {
+    color: var(--text-secondary);
+}
+
+/* Status indicators */
+.chat-bubble .status-complete {
+    background: #10b981;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.chat-bubble .status-pending {
+    background: #f59e0b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.chat-bubble .status-rejected {
+    background: #ef4444;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Enhanced markdown headings in chat */
+.chat-bubble h1, .chat-bubble h2, .chat-bubble h3 {
+    color: var(--text-primary);
+    margin: 16px 0 8px 0;
+    font-weight: 700;
+}
+
+.chat-bubble h1 {
+    font-size: 1.25rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+    padding-bottom: 4px;
+}
+
+.chat-bubble h2 {
+    font-size: 1.1rem;
+    color: #667eea;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chat-bubble h3 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* Code blocks in chat */
+.chat-bubble pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: 0.8rem;
+}
+
+.chat-bubble code {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 0.85rem;
+    color: #a855f7;
+}
+
+.chat-bubble pre code {
+    background: transparent;
+    padding: 0;
+    color: #e5e7eb;
+}
+
+/* List styling in chat */
+.chat-bubble ul, .chat-bubble ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.chat-bubble li {
+    margin-bottom: 4px;
+    line-height: 1.5;
+}
+
+.chat-bubble ul li::marker {
+    color: #667eea;
+}
+
+/* Blockquote styling */
+.chat-bubble blockquote {
+    border-left: 4px solid #667eea;
+    padding-left: 16px;
+    margin: 12px 0;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+/* Summary boxes */
+.chat-bubble .summary-box {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.chat-bubble .summary-box h3 {
+    margin-top: 0;
+    color: #667eea;
+}
+
+/* Emoji support */
+.chat-bubble .emoji {
+    font-size: 1.2em;
+    margin-right: 4px;
+}
+
+/* Dark mode specific adjustments */
+[data-theme="dark"] .chat-bubble table,
+[data-theme="synthwave"] .chat-bubble table,
+[data-theme="cyberpunk"] .chat-bubble table {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .chat-bubble td,
+[data-theme="synthwave"] .chat-bubble td,
+[data-theme="cyberpunk"] .chat-bubble td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Print-friendly table styles */
 @media print {
-    .sidebar-modern,
-    .navbar-modern,
-    .toast-modern {
-        display: none !important;
+    .chat-bubble table {
+        border: 1px solid #000;
+        background: white !important;
     }
     
-    .chat-messages {
-        background: white !important;
-        color: black !important;
+    .chat-bubble th {
+        background: #f0f0f0 !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+    
+    .chat-bubble td {
+        color: #000 !important;
+        border: 1px solid #000;
     }
 }
