@@ -2,7 +2,7 @@ import os
 import asyncio
 import logging
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -20,9 +20,24 @@ from dotenv import load_dotenv
 import json
 from fastapi.middleware.cors import CORSMiddleware
 
-# Configure logging
+# Configure logging with a custom filter to reduce noise
+class SilentFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out specific noisy log messages
+        silenced_messages = [
+            "HTTP Request:",
+            "HTTP Response:",
+            "Connection pool is full",
+            "Starting new HTTPS connection"
+        ]
+        return not any(msg in record.getMessage() for msg in silenced_messages)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Add the filter to reduce noise
+for handler in logging.getLogger().handlers:
+    handler.addFilter(SilentFilter())
 
 # Find and load the .env file
 parent_dir = Path(__file__).resolve().parent
@@ -31,8 +46,14 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
     logger.info(f"Loaded environment from {env_path}")
 else:
-    load_dotenv()
-    logger.info("Loaded environment from local .env file")
+    # Try parent directory
+    parent_env = parent_dir.parent / ".env"
+    if parent_env.exists():
+        load_dotenv(dotenv_path=parent_env)
+        logger.info(f"Loaded environment from {parent_env}")
+    else:
+        load_dotenv()
+        logger.info("Loaded environment from default location")
 
 # Create FastAPI app
 app = FastAPI(title="OpenAlgo Trading Assistant")
@@ -46,34 +67,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set up templates
+# Set up templates and static files
 templates = Jinja2Templates(directory=str(parent_dir / "templates"))
-os.makedirs(parent_dir / "templates", exist_ok=True)
-
-# Set up static files
 static_dir = parent_dir / "static"
+os.makedirs(parent_dir / "templates", exist_ok=True)
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# MCP Connection settings
+# Configuration
 MCP_HOST = os.environ.get("MCP_HOST", "localhost")
 MCP_PORT = int(os.environ.get("MCP_PORT", "8001"))
 MCP_URL = f"http://{MCP_HOST}:{MCP_PORT}/sse"
 
 # LLM Provider settings
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai").lower()
-
-# OpenAI settings
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
-
-# GROQ settings
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-70b-versatile")
 
-# Store active WebSocket connections
+# Store active connections and resources
 active_connections: Dict[str, WebSocket] = {}
+mcp_clients: Dict[str, "MCPClient"] = {}
+agents: Dict[str, Agent] = {}
+chat_histories: Dict[str, "ChatHistory"] = {}
 
-# Helper class for OpenAlgo symbol format assistance
 class SymbolHelper:
+    """Helper class for OpenAlgo symbol format assistance"""
+    
     @staticmethod
     def format_equity(symbol, exchange="NSE"):
         """Format equity symbol"""
@@ -81,27 +100,22 @@ class SymbolHelper:
     
     @staticmethod
     def format_future(base_symbol, expiry_year, expiry_month, expiry_date=None):
-        """Format futures symbol
-        Example: BANKNIFTY24APR24FUT
-        """
+        """Format futures symbol - Example: BANKNIFTY24APR24FUT"""
         month_map = {
             1: "JAN", 2: "FEB", 3: "MAR", 4: "APR", 5: "MAY", 6: "JUN",
             7: "JUL", 8: "AUG", 9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC"
         }
         
-        # Handle month as string or int
         if isinstance(expiry_month, int):
             month_str = month_map[expiry_month]
         else:
             month_str = expiry_month.upper()
             
-        # Format the date part
         if expiry_date:
             date_part = f"{expiry_date}"
         else:
             date_part = ""
             
-        # Format the year (assuming 2-digit year format)
         if isinstance(expiry_year, int) and expiry_year > 2000:
             year = str(expiry_year)[2:]
         else:
@@ -111,30 +125,24 @@ class SymbolHelper:
     
     @staticmethod
     def format_option(base_symbol, expiry_date, expiry_month, expiry_year, strike_price, option_type):
-        """Format options symbol
-        Example: NIFTY28MAR2420800CE
-        """
+        """Format options symbol - Example: NIFTY28MAR2420800CE"""
         month_map = {
             1: "JAN", 2: "FEB", 3: "MAR", 4: "APR", 5: "MAY", 6: "JUN",
             7: "JUL", 8: "AUG", 9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC"
         }
         
-        # Handle month as string or int
         if isinstance(expiry_month, int):
             month_str = month_map[expiry_month]
         else:
             month_str = expiry_month.upper()
             
-        # Format the year (assuming 2-digit year format)
         if isinstance(expiry_year, int) and expiry_year > 2000:
             year = str(expiry_year)[2:]
         else:
             year = str(expiry_year)
             
-        # Format option type (call or put)
         opt_type = "CE" if option_type.upper() in ["C", "CALL", "CE"] else "PE"
         
-        # Format strike price (remove decimal if it's a whole number)
         if isinstance(strike_price, (int, float)):
             if strike_price == int(strike_price):
                 strike_str = str(int(strike_price))
@@ -144,72 +152,68 @@ class SymbolHelper:
             strike_str = strike_price
             
         return f"{base_symbol.upper()}{expiry_date}{month_str}{year}{strike_str}{opt_type}"
-    
-    @staticmethod
-    def get_common_indices(exchange="NSE_INDEX"):
-        """Get common index symbols"""
-        if exchange.upper() == "NSE_INDEX":
-            return ["NIFTY", "BANKNIFTY", "FINNIFTY", "NIFTYNXT50", "MIDCPNIFTY", "INDIAVIX"]
-        elif exchange.upper() == "BSE_INDEX":
-            return ["SENSEX", "BANKEX", "SENSEX50"]
-        return []
 
 class MCPClient:
+    """Enhanced MCP Client with better error handling"""
+    
     def __init__(self):
-        """Initialize session and client objects"""
         self.session: Optional[ClientSession] = None
-        self.exit_stack = AsyncExitStack()
         self._streams_context = None
         self._session_context = None
+        self._connected = False
         
-    async def connect_to_sse_server(self, server_url: str):
+    async def connect_to_sse_server(self, server_url: str) -> bool:
         """Connect to an MCP server running with SSE transport"""
         logger.info(f"Attempting to connect to MCP server at {server_url}")
         try:
-            # Store the context managers so they stay alive
+            # Clean up any existing connections
+            await self.cleanup()
+            
+            # Create new connection
             self._streams_context = sse_client(url=server_url)
             streams = await self._streams_context.__aenter__()
             logger.info("Successfully created SSE client streams")
             
             self._session_context = ClientSession(*streams)
-            self.session: ClientSession = await self._session_context.__aenter__()
+            self.session = await self._session_context.__aenter__()
             logger.info("Successfully created client session")
             
-            # Initialize with detailed error handling
-            try:
-                await self.session.initialize()
-                logger.info("Successfully initialized MCP session")
-            except Exception as e:
-                logger.error(f"Error during session initialization: {str(e)}")
-                raise
-                
-            # Try to verify connection by listing tools
-            try:
-                response = await self.session.list_tools()
-                logger.info(f"Successfully connected and retrieved tools from server")
-                return True
-            except Exception as e:
-                logger.error(f"Error listing tools: {str(e)}")
-                raise
+            # Initialize session
+            await self.session.initialize()
+            logger.info("Successfully initialized MCP session")
+            
+            # Verify connection by listing tools
+            response = await self.session.list_tools()
+            logger.info(f"Successfully connected - found {len(response.tools)} tools")
+            self._connected = True
+            return True
                 
         except Exception as e:
             logger.error(f"Error connecting to MCP server: {str(e)}")
+            await self.cleanup()
             raise
 
     async def cleanup(self):
         """Properly clean up the session and streams"""
-        if self._session_context:
-            await self._session_context.__aexit__(None, None, None)
-        if self._streams_context:
-            await self._streams_context.__aexit__(None, None, None)
+        try:
+            if self._session_context:
+                await self._session_context.__aexit__(None, None, None)
+                self._session_context = None
+            if self._streams_context:
+                await self._streams_context.__aexit__(None, None, None)
+                self._streams_context = None
+            self.session = None
+            self._connected = False
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
 
     async def disconnect(self):
         """Disconnect from the MCP server"""
         await self.cleanup()
 
-# Store MCP clients for each connection
-mcp_clients: Dict[str, MCPClient] = {}
-agents: Dict[str, Agent] = {}
+    @property
+    def is_connected(self) -> bool:
+        return self._connected and self.session is not None
 
 class Message(BaseModel):
     role: str
@@ -218,10 +222,7 @@ class Message(BaseModel):
 class ChatHistory(BaseModel):
     messages: List[Message] = []
 
-# Initialize chat histories
-chat_histories: Dict[str, ChatHistory] = {}
-
-async def get_mcp_client(client_id: str):
+async def get_mcp_client(client_id: str) -> MCPClient:
     """Get or create an MCP client for the connection"""
     if client_id not in mcp_clients:
         mcp_client = MCPClient()
@@ -233,6 +234,12 @@ async def get_mcp_client(client_id: str):
             mcp_tools = MCPTools(session=mcp_client.session)
             await mcp_tools.initialize()
             
+            # Choose model based on provider
+            if LLM_PROVIDER == "groq":
+                model = Groq(id=GROQ_MODEL, timeout=60.0)
+            else:
+                model = OpenAIChat(id=OPENAI_MODEL)
+            
             agent = Agent(
                 instructions="""
 You are an OpenAlgo Trading Assistant, helping users manage their trading accounts, orders, portfolio, and positions using OpenAlgo API tools provided over MCP.
@@ -241,14 +248,7 @@ You are an OpenAlgo Trading Assistant, helping users manage their trading accoun
 - Respond in human-like conversational, friendly, and professional tone in concise manner.
 - When market data is requested, always present it in a clean, easy-to-read format.
 - For numerical values like prices and quantities, always display them with appropriate units.
-- IMPORTANT: When displaying tables of data (orders, positions, etc.), format them using markdown tables with clear headers and aligned columns. For example:
-
-```
-| Order ID | Symbol | Action | Quantity | Price | Status |
-|----------|--------|--------|----------|-------|--------|
-| 12345678 | RELIANCE | BUY | 10 | 1426.5 | complete |
-```
-- Help users construct proper symbol formats based on OpenAlgo's standardized conventions.
+- IMPORTANT: When displaying tables of data (orders, positions, etc.), format them using markdown tables with clear headers and aligned columns.
 
 # Responsibilities:
 - Assist with order placement, modification, and cancellation
@@ -258,70 +258,23 @@ You are an OpenAlgo Trading Assistant, helping users manage their trading accoun
 - Assist with retrieving funds and managing positions
 - Guide users on correct OpenAlgo symbol formats for different instruments
 
-# Available Tools:
-
-## Order Management:
-- place_order: Place a new order with support for market, limit, stop-loss orders
-- modify_order: Modify an existing order's price, quantity, or other parameters
-- cancel_order: Cancel a specific order by ID
-- cancel_all_orders: Cancel all open orders
-- get_order_status: Check the status of a specific order
-- get_orders: List all orders
-
-## Advanced Order Types:
-- place_basket_order: Place multiple orders simultaneously
-- place_split_order: Split a large order into smaller chunks to reduce market impact
-- place_smart_order: Place an order that considers current position size
-
-## Market Data:
-- get_quote: Get current market quotes (bid, ask, last price) for a symbol
-- get_depth: Get detailed market depth (order book) for a symbol
-- get_history: Get historical price data for a symbol with various timeframes
-- get_intervals: Get available time intervals for historical data
-
-## Position & Portfolio Management:
-- get_open_position: Get details of an open position for a specific symbol
-- close_all_positions: Close all open positions across all symbols
-- get_position_book: Get all current positions
-- get_holdings: Get portfolio holdings information
-- get_trade_book: Get record of all executed trades
-
-## Account & Configuration:
-- get_funds: Get available funds and margin information
-- get_all_tickers: Get list of all available trading symbols
-- get_symbol_metadata: Get detailed information about a trading symbol
-
 # OpenAlgo Symbol Format Guidelines:
-
 ## Exchange Codes:
 - NSE: National Stock Exchange equities
 - BSE: Bombay Stock Exchange equities
 - NFO: NSE Futures and Options
 - BFO: BSE Futures and Options
-- BCD: BSE Currency Derivatives
-- CDS: NSE Currency Derivatives
-- MCX: Multi Commodity Exchange
-- NSE_INDEX: NSE indices
-- BSE_INDEX: BSE indices
 
 ## Equity Symbol Format:
 Simply use the base symbol, e.g., "INFY", "SBIN", "TATAMOTORS"
 
 ## Future Symbol Format:
 [Base Symbol][Expiration Date]FUT
-Examples:
-- BANKNIFTY24APR24FUT (Bank Nifty futures expiring in April 2024)
-- USDINR10MAY24FUT (USDINR currency futures expiring in May 2024)
+Examples: BANKNIFTY24APR24FUT, USDINR10MAY24FUT
 
 ## Options Symbol Format:
 [Base Symbol][Expiration Date][Strike Price][Option Type]
-Examples:
-- NIFTY28MAR2420800CE (Nifty call option with 20,800 strike expiring March 28, 2024)
-- VEDL25APR24292.5CE (Vedanta call option with 292.50 strike expiring April 25, 2024)
-
-## Common Index Symbols:
-- NSE_INDEX: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, INDIAVIX
-- BSE_INDEX: SENSEX, BANKEX, SENSEX50
+Examples: NIFTY28MAR2420800CE, VEDL25APR24292.5CE
 
 # Parameter Guidelines:
 - symbol: Trading symbol following OpenAlgo format
@@ -335,15 +288,7 @@ Examples:
 # Limitations:
 You are not a financial advisor and should not provide investment advice. Your role is to ensure secure, efficient, and compliant account management.
 """,
-                # Initialize the appropriate model with better error handling
-                model=(
-                    Groq(
-                        id=GROQ_MODEL,
-                        # Add more conservative timeout for GROQ
-                        timeout=60.0
-                    ) if LLM_PROVIDER == "groq" else 
-                    OpenAIChat(id=OPENAI_MODEL)
-                ),
+                model=model,
                 add_history_to_messages=True,
                 num_history_responses=10,
                 tools=[mcp_tools],
@@ -357,8 +302,6 @@ You are not a financial advisor and should not provide investment advice. Your r
             )
             
             agents[client_id] = agent
-            
-            # Initialize chat history
             chat_histories[client_id] = ChatHistory()
             
         except Exception as e:
@@ -418,10 +361,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         mcp_client = await get_mcp_client(client_id)
         
         while True:
-            data = await websocket.receive_text()
             try:
+                data = await websocket.receive_text()
                 message = json.loads(data)
-                user_query = message.get("content", "")
+                user_query = message.get("content", "").strip()
                 
                 if not user_query:
                     continue
@@ -437,39 +380,63 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 
                 # Get agent response
                 agent = agents[client_id]
-                response_text = ""
+                full_response = ""
+                has_streamed_content = False
                 
                 # Run the agent and stream the response
-                result = await agent.arun(user_query, stream=True)
-                async for response in result:
-                    if response.content:
-                        # Append to the full response
-                        response_text += response.content
-                        # Send partial response
+                try:
+                    result = await agent.arun(user_query, stream=True)
+                    
+                    # Check if we get streaming responses
+                    async for response in result:
+                        if response.content:
+                            has_streamed_content = True
+                            full_response += response.content
+                            # Send partial response
+                            await websocket.send_json({
+                                "role": "assistant",
+                                "content": response.content,
+                                "partial": True
+                            })
+                    
+                    # Only send complete response if we didn't get any streaming content
+                    if not has_streamed_content and full_response:
                         await websocket.send_json({
                             "role": "assistant",
-                            "content": response.content,
-                            "partial": True
+                            "content": full_response,
+                            "partial": False
                         })
+                    elif has_streamed_content:
+                        # Send a signal that streaming is complete (frontend will ignore this)
+                        await websocket.send_json({
+                            "role": "assistant",
+                            "content": "",
+                            "partial": False,
+                            "streaming_complete": True
+                        })
+                    
+                except Exception as agent_error:
+                    logger.error(f"Agent error: {str(agent_error)}")
+                    full_response = f"I encountered an error while processing your request: {str(agent_error)}"
+                    # Send error as complete message (not streaming)
+                    await websocket.send_json({
+                        "role": "assistant",
+                        "content": full_response,
+                        "partial": False
+                    })
                 
-                # Send complete response
-                await websocket.send_json({
-                    "role": "assistant",
-                    "content": response_text,
-                    "partial": False
-                })
-                
-                # Add assistant message to chat history
-                chat_histories[client_id].messages.append(Message(role="assistant", content=response_text))
+                # Add assistant message to chat history (use full response)
+                if full_response:
+                    chat_histories[client_id].messages.append(Message(role="assistant", content=full_response))
                 
             except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received: {data}")
+                logger.error(f"Invalid JSON received from client {client_id}")
                 await websocket.send_json({
                     "role": "system",
                     "content": "Error: Invalid message format."
                 })
             except Exception as e:
-                logger.error(f"Error processing message: {str(e)}")
+                logger.error(f"Error processing message from {client_id}: {str(e)}")
                 await websocket.send_json({
                     "role": "system",
                     "content": f"Error: {str(e)}"
@@ -477,11 +444,17 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     
     except WebSocketDisconnect:
         logger.info(f"Client {client_id} disconnected")
+    except Exception as e:
+        logger.error(f"WebSocket error for client {client_id}: {str(e)}")
+    finally:
+        # Clean up resources
         active_connections.pop(client_id, None)
         
-        # Clean up resources
         if client_id in mcp_clients:
-            await mcp_clients[client_id].disconnect()
+            try:
+                await mcp_clients[client_id].disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting MCP client: {str(e)}")
             mcp_clients.pop(client_id, None)
         
         if client_id in agents:
@@ -489,12 +462,26 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         
         if client_id in chat_histories:
             chat_histories.pop(client_id, None)
-
+            
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up resources on shutdown"""
-    for client_id, mcp_client in mcp_clients.items():
-        await mcp_client.disconnect()
+    logger.info("Shutting down - cleaning up resources")
+    for client_id, mcp_client in list(mcp_clients.items()):
+        try:
+            await mcp_client.disconnect()
+        except Exception as e:
+            logger.error(f"Error disconnecting client {client_id}: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    logger.info(f"Starting OpenAlgo Trading Assistant on port 8000")
+    logger.info(f"MCP Server URL: {MCP_URL}")
+    logger.info(f"LLM Provider: {LLM_PROVIDER}")
+    
+    uvicorn.run(
+        "app:app", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=True,
+        log_level="info"
+    )

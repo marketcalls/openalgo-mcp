@@ -1,4 +1,4 @@
-// Enhanced OpenAlgo Trading Assistant JavaScript
+// Enhanced OpenAlgo Trading Assistant JavaScript - Streaming Fix
 
 class TradingAssistant {
     constructor() {
@@ -11,6 +11,9 @@ class TradingAssistant {
         this.maxReconnectAttempts = 5;
         this.messageQueue = [];
         this.isTyping = false;
+        this.currentAssistantMessageId = null; // Track current streaming message
+        this.messageIdCounter = 0; // Counter for unique message IDs
+        this.isStreaming = false; // Track if we're currently streaming
         
         this.init();
     }
@@ -192,18 +195,41 @@ class TradingAssistant {
     handleWebSocketMessage(event) {
         try {
             const message = JSON.parse(event.data);
+            console.log('Received message:', message); // Debug log
             
             if (message.role === 'system') {
+                // Only show system messages that are not "Processing your request..."
                 if (message.content !== 'Processing your request...') {
                     this.showNotification(message.content, 'info');
                 }
-            } else if (message.role === 'assistant') {
+                return; // Don't add system messages to chat
+            } 
+            
+            if (message.role === 'assistant') {
                 this.removeTypingIndicator();
                 
                 if (message.partial === true) {
-                    this.appendToLastAssistantMessage(message.content);
-                } else {
-                    this.addMessage('assistant', message.content);
+                    // This is a streaming partial response
+                    if (!this.isStreaming) {
+                        // First streaming chunk - create new message
+                        this.isStreaming = true;
+                        this.addMessage('assistant', message.content);
+                    } else {
+                        // Subsequent streaming chunks - append to existing message
+                        this.appendToCurrentAssistantMessage(message.content);
+                    }
+                } else if (message.partial === false) {
+                    // This is the end of streaming or a complete non-streaming message
+                    if (this.isStreaming) {
+                        // End of streaming - reset streaming state but don't add new message
+                        console.log('Streaming complete, resetting state');
+                        this.isStreaming = false;
+                        this.currentAssistantMessageId = null;
+                    } else if (message.content && message.content.trim()) {
+                        // This is a complete non-streaming message with content
+                        this.addMessage('assistant', message.content);
+                    }
+                    // Ignore empty final messages
                 }
             }
         } catch (error) {
@@ -277,6 +303,10 @@ class TradingAssistant {
             return;
         }
         
+        // Reset streaming state when user sends new message
+        this.isStreaming = false;
+        this.currentAssistantMessageId = null;
+        
         // Add user message to chat
         this.addMessage('user', message);
         
@@ -325,8 +355,10 @@ class TradingAssistant {
         const messagesContainer = document.getElementById('chat-messages');
         if (!messagesContainer) return;
         
+        const messageId = `message-${this.messageIdCounter++}`;
         const chatDiv = document.createElement('div');
         chatDiv.className = `chat ${role === 'user' ? 'chat-end' : 'chat-start'} message-enter`;
+        chatDiv.setAttribute('data-message-id', messageId);
         
         const isUser = role === 'user';
         const timestamp = new Date().toLocaleTimeString();
@@ -348,6 +380,11 @@ class TradingAssistant {
         
         messagesContainer.appendChild(chatDiv);
         this.scrollToBottom();
+        
+        // Set current assistant message ID for streaming
+        if (role === 'assistant') {
+            this.currentAssistantMessageId = messageId;
+        }
         
         // Reinitialize icons
         if (typeof lucide !== 'undefined') {
@@ -404,23 +441,31 @@ class TradingAssistant {
         }
     }
 
-    appendToLastAssistantMessage(content) {
-        this.removeTypingIndicator();
-        
-        const messagesContainer = document.getElementById('chat-messages');
-        const chatBubbles = messagesContainer.querySelectorAll('.chat-start .chat-bubble-primary');
-        
-        if (chatBubbles.length === 0) {
+    appendToCurrentAssistantMessage(content) {
+        if (!this.currentAssistantMessageId) {
+            // If no current message, create a new one
             this.addMessage('assistant', content);
             return;
         }
         
-        const lastBubble = chatBubbles[chatBubbles.length - 1];
-        const currentContent = lastBubble.innerHTML;
+        const messagesContainer = document.getElementById('chat-messages');
+        const currentMessage = messagesContainer.querySelector(`[data-message-id="${this.currentAssistantMessageId}"]`);
         
-        // Update content with new text
-        const updatedContent = this.extractTextContent(currentContent) + content;
-        lastBubble.innerHTML = this.parseMarkdown(updatedContent);
+        if (!currentMessage) {
+            // If message not found, create a new one
+            this.addMessage('assistant', content);
+            return;
+        }
+        
+        const chatBubble = currentMessage.querySelector('.chat-bubble');
+        if (!chatBubble) return;
+        
+        // Get current content and append new content
+        const currentContent = this.extractTextContent(chatBubble.innerHTML);
+        const updatedContent = currentContent + content;
+        
+        // Update the bubble with the new content
+        chatBubble.innerHTML = this.parseMarkdown(updatedContent);
         
         this.scrollToBottom();
         
@@ -454,7 +499,6 @@ class TradingAssistant {
             let processedContent = content;
             
             // Fix malformed tables from GROQ responses
-            // Check for table-like content and ensure proper formatting
             if (content.includes('|') && !content.includes('```')) {
                 const lines = content.split('\n');
                 const tableLines = [];
@@ -518,6 +562,9 @@ class TradingAssistant {
 
     startNewChat() {
         this.clientId = uuid.v4();
+        this.currentAssistantMessageId = null;
+        this.messageIdCounter = 0;
+        this.isStreaming = false;
         this.clearChat();
         if (!this.isConnected) {
             this.connectWebSocket();
@@ -548,6 +595,9 @@ class TradingAssistant {
         `;
         
         this.chatHistory = [];
+        this.currentAssistantMessageId = null;
+        this.messageIdCounter = 0;
+        this.isStreaming = false;
         
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
@@ -758,39 +808,6 @@ class TradingAssistant {
         }
     }
 
-    // Quick Order Modal
-    showQuickOrders() {
-        const modal = document.getElementById('quick-order-modal');
-        if (modal) {
-            modal.showModal();
-        }
-    }
-
-    placeQuickOrder() {
-        const formData = {
-            symbol: document.getElementById('order-symbol')?.value,
-            exchange: document.getElementById('order-exchange')?.value,
-            action: document.getElementById('order-action')?.value,
-            quantity: document.getElementById('order-quantity')?.value,
-            orderType: document.getElementById('order-type')?.value,
-            product: document.getElementById('order-product')?.value
-        };
-        
-        if (!formData.symbol || !formData.quantity) {
-            this.showNotification('Please fill in required fields', 'warning');
-            return;
-        }
-        
-        const orderMessage = `Place ${formData.action} order for ${formData.quantity} shares of ${formData.symbol} on ${formData.exchange} as ${formData.orderType} ${formData.product}`;
-        
-        const modal = document.getElementById('quick-order-modal');
-        if (modal) {
-            modal.close();
-        }
-        
-        this.quickMessage(orderMessage);
-    }
-
     // Cleanup
     cleanup() {
         if (this.socket) {
@@ -830,11 +847,11 @@ function getFunds() {
 }
 
 function showQuickOrders() {
-    window.tradingAssistant?.showQuickOrders();
+    window.tradingAssistant?.showNotification('Quick orders panel coming soon!', 'info');
 }
 
 function placeQuickOrder() {
-    window.tradingAssistant?.placeQuickOrder();
+    window.tradingAssistant?.showNotification('Quick order placement coming soon!', 'info');
 }
 
 function toggleTheme() {
