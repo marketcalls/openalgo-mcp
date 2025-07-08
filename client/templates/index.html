@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAlgo Trading Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .main-layout {
+            background: var(--bg-secondary);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .chat-container {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin: 16px;
+            overflow: hidden;
+        }
+
+        .message-container {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding: 24px;
+            background: var(--bg-primary);
+        }
+
+        .message {
+            margin-bottom: 24px;
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+            margin-left: 20%;
+        }
+
+        .message-assistant {
+            display: flex;
+            justify-content: flex-start;
+            margin-right: 20%;
+        }
+
+        .message-bubble {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            position: relative;
+            max-width: 100%;
+            box-shadow: var(--card-shadow);
+        }
+
+        .message-user .message-bubble {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .message-content {
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .message-user .message-content {
+            color: white;
+        }
+
+        .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content ul, .message-content ol {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+
+        .message-content li {
+            margin-bottom: 4px;
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-connected {
+            background: var(--success-color);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .status-connecting {
+            background: var(--warning-color);
+            animation: pulse 1s infinite;
+        }
+
+        .status-disconnected {
+            background: var(--error-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typingDots 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes typingDots {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .input-container {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .input-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .chat-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            padding: 12px 16px;
+            resize: none;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-send {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-send:hover {
+            background: #5048e5;
+            transform: translateY(-1px);
+        }
+
+        .btn-send:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .connection-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .server-url {
+            font-size: 11px;
+            opacity: 0.8;
+            word-break: break-all;
+        }
+
+        .btn-connect {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .btn-connect:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .market-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .market-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .market-item:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow);
+        }
+
+        .market-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .market-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 4px 0;
+        }
+
+        .market-change {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .market-change.positive {
+            color: var(--success-color);
+        }
+
+        .market-change.negative {
+            color: var(--error-color);
+        }
+
+        .chat-history {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .history-item:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .navbar {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .mobile-hidden {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .mobile-hidden {
+                display: block;
+            }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            animation: notificationSlide 0.3s ease-out;
+            max-width: 300px;
+        }
+
+        @keyframes notificationSlide {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .notification.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .notification.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .notification.info {
+            border-left: 4px solid var(--primary-color);
+        }
+    </style>
+</head>
+<body class="main-layout">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i data-lucide="trending-up" class="w-6 h-6" style="color: var(--primary-color);"></i>
+            OpenAlgo Trading Assistant
+        </div>
+        <div class="navbar-actions">
+            <div class="connection-status">
+                <span class="status-indicator status-disconnected" id="connection-indicator"></span>
+                <span id="connection-status" style="font-size: 12px; color: var(--text-secondary);">Disconnected</span>
+            </div>
+            <button id="theme-toggle" class="theme-toggle">
+                <i data-lucide="sun" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div style="display: flex; height: calc(100vh - 60px);">
+        <!-- Sidebar -->
+        <div class="sidebar mobile-hidden" style="width: 320px;">
+            <!-- Connection Card -->
+            <div class="sidebar-section">
+                <div class="connection-card">
+                    <div class="connection-status">
+                        <span class="status-indicator status-disconnected" id="sidebar-indicator"></span>
+                        <span>Server Connection</span>
+                    </div>
+                    <div class="server-url" id="server-url">http://localhost:8001/sse</div>
+                    <button id="connect-btn" class="btn-connect">
+                        <i data-lucide="wifi" class="w-4 h-4" style="display: inline; margin-right: 8px;"></i>
+                        Connect to Server
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="sidebar-title">Quick Actions</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button onclick="startNewChat()" style="background: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                        <i data-lucide="plus" class="w-3 h-3" style="display: inline; margin-right: 4px;"></i>
+                        New Chat
+                    </button>
+                    <button onclick="clearChat()" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                        <i data-lucide="trash-2" class="w-3 h-3" style="display: inline; margin-right: 4px;"></i>
+                        Clear
+                    </button>
+                    <button onclick="getPortfolio()" style="background: var(--success-color); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                        <i data-lucide="briefcase" class="w-3 h-3" style="display: inline; margin-right: 4px;"></i>
+                        Portfolio
+                    </button>
+                    <button onclick="getFunds()" style="background: var(--warning-color); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                        <i data-lucide="dollar-sign" class="w-3 h-3" style="display: inline; margin-right: 4px;"></i>
+                        Funds
+                    </button>
+                </div>
+            </div>
+
+            <!-- Market Overview -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Market Overview</div>
+                <div class="market-overview" id="market-overview">
+                    <!-- Market data will be populated here -->
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Recent Chats</div>
+                <div class="chat-history" id="chat-history">
+                    <!-- Chat history will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div style="flex: 1; display: flex; flex-direction: column;">
+            <div class="chat-container" style="flex: 1; display: flex; flex-direction: column; margin: 16px;">
+                <!-- Messages -->
+                <div class="message-container" id="chat-messages">
+                    <!-- Welcome Message -->
+                    <div class="message message-assistant">
+                        <div class="message-bubble">
+                            <div class="message-header">
+                                <i data-lucide="bot" class="w-3 h-3"></i>
+                                Trading Assistant
+                                <span id="welcome-time"></span>
+                            </div>
+                            <div class="message-content">
+                                <p><strong>Welcome to OpenAlgo Trading Assistant!</strong> 🚀</p>
+                                <p>I'm here to help you with:</p>
+                                <ul>
+                                    <li>📊 Portfolio management and analysis</li>
+                                    <li>📈 Real-time market quotes and data</li>
+                                    <li>💰 Order placement and tracking</li>
+                                    <li>📋 Position monitoring and updates</li>
+                                    <li>💸 Fund information and margin details</li>
+                                </ul>
+                                <p>How can I assist you today?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container">
+                    <form id="message-form">
+                        <div class="input-wrapper" style="display: flex; align-items: flex-end; gap: 8px;">
+                            <textarea 
+                                id="user-input" 
+                                class="chat-input"
+                                placeholder="Ask me about your portfolio, place orders, or get market data..."
+                                rows="1"
+                                style="flex: 1;"
+                            ></textarea>
+                            <button type="submit" class="btn-send" id="send-btn">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Quick Suggestions -->
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" onclick="quickMessage('Show my portfolio')">Show Portfolio</button>
+                        <button class="quick-action-btn" onclick="quickMessage('Get NIFTY quote')">NIFTY Quote</button>
+                        <button class="quick-action-btn" onclick="quickMessage('Show my funds')">My Funds</button>
+                        <button class="quick-action-btn" onclick="quickMessage('List my orders')">My Orders</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced Trading Assistant with clean formatting
+        class TradingAssistant {
+            constructor() {
+                this.socket = null;
+                this.clientId = null;
+                this.isConnected = false;
+                this.chatHistory = [];
+                this.currentTheme = 'light';
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.messageQueue = [];
+                
+                this.init();
+            }
+
+            init() {
+                this.clientId = uuid.v4();
+                this.setupEventListeners();
+                this.initializeUI();
+                this.checkServerStatus();
+                
+                setTimeout(() => {
+                    this.connectWebSocket();
+                }, 1000);
+            }
+
+            setupEventListeners() {
+                document.getElementById('message-form').addEventListener('submit', (e) => this.sendMessage(e));
+                document.getElementById('connect-btn').addEventListener('click', () => this.toggleConnection());
+                document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
+                
+                const userInput = document.getElementById('user-input');
+                userInput.addEventListener('input', (e) => this.autoResizeTextarea(e.target));
+                userInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage(e);
+                    }
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                        e.preventDefault();
+                        userInput.focus();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                        e.preventDefault();
+                        this.startNewChat();
+                    }
+                });
+            }
+
+            initializeUI() {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                
+                document.getElementById('welcome-time').textContent = new Date().toLocaleTimeString();
+                
+                // Initialize theme
+                const savedTheme = localStorage.getItem('trading-assistant-theme') || 'light';
+                this.setTheme(savedTheme);
+                
+                setTimeout(() => {
+                    this.addSampleMarketData();
+                    this.addSampleChatHistory();
+                }, 2000);
+            }
+
+            async checkServerStatus() {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    document.getElementById('server-url').textContent = data.mcp_server;
+                    
+                    if (data.status === 'connected') {
+                        this.updateConnectionStatus('ready');
+                    } else {
+                        this.updateConnectionStatus('disconnected');
+                        if (data.status === 'error') {
+                            this.showNotification(`Server error: ${data.message}`, 'error');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking server status:', error);
+                    this.updateConnectionStatus('disconnected');
+                }
+            }
+
+            toggleConnection() {
+                if (this.isConnected) {
+                    this.disconnectWebSocket();
+                } else {
+                    this.connectWebSocket();
+                }
+            }
+
+            connectWebSocket() {
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+                
+                this.updateConnectionStatus('connecting');
+                
+                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const wsUrl = `${protocol}${window.location.host}/ws/${this.clientId}`;
+                
+                try {
+                    this.socket = new WebSocket(wsUrl);
+                    
+                    this.socket.onopen = () => {
+                        this.isConnected = true;
+                        this.reconnectAttempts = 0;
+                        this.updateConnectionStatus('connected');
+                        this.showNotification('Connected to trading assistant', 'success');
+                        this.processMessageQueue();
+                    };
+                    
+                    this.socket.onmessage = (event) => {
+                        this.handleWebSocketMessage(event);
+                    };
+                    
+                    this.socket.onclose = (event) => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected');
+                        
+                        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                            this.attemptReconnection();
+                        }
+                    };
+                    
+                    this.socket.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateConnectionStatus('disconnected');
+                        this.showNotification('Connection error occurred', 'error');
+                    };
+                    
+                } catch (error) {
+                    console.error('Failed to create WebSocket connection:', error);
+                    this.updateConnectionStatus('disconnected');
+                    this.showNotification('Failed to establish connection', 'error');
+                }
+            }
+
+            disconnectWebSocket() {
+                if (this.socket) {
+                    this.socket.close(1000, 'User initiated disconnect');
+                    this.socket = null;
+                }
+                this.isConnected = false;
+                this.updateConnectionStatus('disconnected');
+            }
+
+            attemptReconnection() {
+                this.reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+                
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        this.connectWebSocket();
+                    }
+                }, delay);
+            }
+
+            handleWebSocketMessage(event) {
+                try {
+                    const message = JSON.parse(event.data);
+                    
+                    if (message.role === 'system') {
+                        if (message.content !== 'Processing your request...') {
+                            this.showNotification(message.content, 'info');
+                        }
+                    } else if (message.role === 'assistant') {
+                        this.removeTypingIndicator();
+                        
+                        if (message.partial === true) {
+                            this.appendToLastAssistantMessage(message.content);
+                        } else {
+                            this.addMessage('assistant', message.content);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            }
+
+            updateConnectionStatus(status) {
+                const indicators = ['connection-indicator', 'sidebar-indicator'];
+                const statusText = document.getElementById('connection-status');
+                const connectBtn = document.getElementById('connect-btn');
+                
+                indicators.forEach(id => {
+                    const indicator = document.getElementById(id);
+                    if (indicator) {
+                        indicator.className = 'status-indicator';
+                        indicator.classList.add(`status-${status}`);
+                    }
+                });
+                
+                if (statusText) {
+                    switch (status) {
+                        case 'connected':
+                            statusText.textContent = 'Connected';
+                            break;
+                        case 'connecting':
+                            statusText.textContent = 'Connecting...';
+                            break;
+                        case 'ready':
+                            statusText.textContent = 'Ready';
+                            break;
+                        default:
+                            statusText.textContent = 'Disconnected';
+                    }
+                }
+                
+                if (connectBtn) {
+                    if (status === 'connected') {
+                        connectBtn.innerHTML = '<i data-lucide="wifi-off" class="w-4 h-4" style="display: inline; margin-right: 8px;"></i>Disconnect';
+                    } else {
+                        connectBtn.innerHTML = '<i data-lucide="wifi" class="w-4 h-4" style="display: inline; margin-right: 8px;"></i>Connect to Server';
+                    }
+                }
+                
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+
+            sendMessage(event) {
+                event.preventDefault();
+                
+                const inputElement = document.getElementById('user-input');
+                const message = inputElement.value.trim();
+                
+                if (!message) return;
+                
+                if (!this.isConnected) {
+                    this.showNotification('Please connect to the server first', 'warning');
+                    this.messageQueue.push(message);
+                    return;
+                }
+                
+                this.addMessage('user', message);
+                
+                try {
+                    this.socket.send(JSON.stringify({
+                        role: 'user',
+                        content: message
+                    }));
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    this.showNotification('Failed to send message', 'error');
+                    return;
+                }
+                
+                inputElement.value = '';
+                this.resetTextareaHeight(inputElement);
+                this.addTypingIndicator();
+                
+                this.chatHistory.push({
+                    role: 'user',
+                    content: message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            processMessageQueue() {
+                while (this.messageQueue.length > 0 && this.isConnected) {
+                    const message = this.messageQueue.shift();
+                    document.getElementById('user-input').value = message;
+                    this.sendMessage({ preventDefault: () => {} });
+                    
+                    if (this.messageQueue.length > 0) {
+                        setTimeout(() => this.processMessageQueue(), 1000);
+                        break;
+                    }
+                }
+            }
+
+            addMessage(role, content) {
+                this.removeTypingIndicator();
+                
+                const messagesContainer = document.getElementById('chat-messages');
+                if (!messagesContainer) return;
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message message-${role}`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                const isUser = role === 'user';
+                
+                // Clean and format the content properly
+                const formattedContent = this.formatMessageContent(content, role);
+                
+                messageDiv.innerHTML = `
+                    <div class="message-bubble">
+                        <div class="message-header">
+                            <i data-lucide="${isUser ? 'user' : 'bot'}" class="w-3 h-3"></i>
+                            ${isUser ? 'You' : 'Trading Assistant'}
+                            <span>${timestamp}</span>
+                        </div>
+                        <div class="message-content">
+                            ${formattedContent}
+                        </div>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+                
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                
+                this.chatHistory.push({
+                    role,
+                    content,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            formatMessageContent(content, role) {
+                if (role === 'user') {
+                    return this.escapeHtml(content).replace(/\n/g, '<br>');
+                }
+                
+                // For assistant messages, clean up the content and apply proper formatting
+                let cleanContent = content;
+                
+                // Remove excessive asterisks and clean up formatting
+                cleanContent = cleanContent.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                cleanContent = cleanContent.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+                
+                // Handle structured data better
+                cleanContent = this.formatStructuredData(cleanContent);
+                
+                // Parse markdown for other elements
+                if (typeof marked !== 'undefined') {
+                    try {
+                        return marked.parse(cleanContent);
+                    } catch (error) {
+                        console.error('Markdown parsing error:', error);
+                        return cleanContent.replace(/\n/g, '<br>');
+                    }
+                } else {
+                    return cleanContent.replace(/\n/g, '<br>');
+                }
+            }
+
+            formatStructuredData(content) {
+                // Format fund information
+                content = content.replace(
+                    /Available Cash\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>Available Cash:</strong> $1</div>'
+                );
+                
+                content = content.replace(
+                    /Collateral\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>Collateral:</strong> $1</div>'
+                );
+                
+                content = content.replace(
+                    /M2M\s*\([^)]+\)\s*Realized\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>M2M Realized:</strong> $1</div>'
+                );
+                
+                content = content.replace(
+                    /M2M\s*Unrealized\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>M2M Unrealized:</strong> $1</div>'
+                );
+                
+                content = content.replace(
+                    /Utilized Debits\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>Utilized Debits:</strong> $1</div>'
+                );
+                
+                // Format stock quotes
+                content = content.replace(
+                    /Last Traded Price \(LTP\)\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>Last Traded Price (LTP):</strong> $1</div>'
+                );
+                
+                content = content.replace(
+                    /(Open|High|Low|Previous Close)\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>$1:</strong> $2</div>'
+                );
+                
+                // Format order information
+                content = content.replace(
+                    /Order ID\s*:\s*([^*\n]+)/g,
+                    '<div class="data-item"><strong>Order ID:</strong> <code>$1</code></div>'
+                );
+                
+                return content;
+            }
+
+            addTypingIndicator() {
+                this.removeTypingIndicator();
+                
+                const messagesContainer = document.getElementById('chat-messages');
+                if (!messagesContainer) return;
+                
+                const typingDiv = document.createElement('div');
+                typingDiv.id = 'typing-indicator';
+                typingDiv.className = 'message message-assistant';
+                
+                typingDiv.innerHTML = `
+                    <div class="message-bubble">
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(typingDiv);
+                this.scrollToBottom();
+            }
+
+            removeTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
+            appendToLastAssistantMessage(content) {
+                this.removeTypingIndicator();
+                
+                const messagesContainer = document.getElementById('chat-messages');
+                const assistantMessages = messagesContainer.querySelectorAll('.message-assistant .message-content');
+                
+                if (assistantMessages.length === 0) {
+                    this.addMessage('assistant', content);
+                    return;
+                }
+                
+                const lastMessageContent = assistantMessages[assistantMessages.length - 1];
+                const currentText = this.extractTextContent(lastMessageContent.innerHTML);
+                const updatedContent = currentText + content;
+                
+                lastMessageContent.innerHTML = this.formatMessageContent(updatedContent, 'assistant');
+                this.scrollToBottom();
+                
+                if (this.chatHistory.length > 0) {
+                    const lastEntry = this.chatHistory[this.chatHistory.length - 1];
+                    if (lastEntry.role === 'assistant') {
+                        lastEntry.content += content;
+                    }
+                }
+            }
+
+            scrollToBottom() {
+                const messagesContainer = document.getElementById('chat-messages');
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            extractTextContent(html) {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                return div.textContent || div.innerText || '';
+            }
+
+            autoResizeTextarea(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+
+            resetTextareaHeight(textarea) {
+                textarea.style.height = 'auto';
+            }
+
+            quickMessage(message) {
+                const input = document.getElementById('user-input');
+                if (input) {
+                    input.value = message;
+                    this.sendMessage({ preventDefault: () => {} });
+                }
+            }
+
+            startNewChat() {
+                this.clientId = uuid.v4();
+                this.clearChat();
+                if (!this.isConnected) {
+                    this.connectWebSocket();
+                }
+                this.showNotification('Started new chat session', 'success');
+            }
+
+            clearChat() {
+                const messagesContainer = document.getElementById('chat-messages');
+                if (!messagesContainer) return;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                messagesContainer.innerHTML = `
+                    <div class="message message-assistant">
+                        <div class="message-bubble">
+                            <div class="message-header">
+                                <i data-lucide="bot" class="w-3 h-3"></i>
+                                Trading Assistant
+                                <span>${timestamp}</span>
+                            </div>
+                            <div class="message-content">
+                                <p>Chat cleared. Ready for new conversation! 🎉</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                this.chatHistory = [];
+                
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+
+            setTheme(theme) {
+                this.currentTheme = theme;
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('trading-assistant-theme', theme);
+                
+                const themeIcon = document.querySelector('#theme-toggle i');
+                if (themeIcon) {
+                    themeIcon.setAttribute('data-lucide', theme === 'dark' ? 'moon' : 'sun');
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }
+            }
+
+            toggleTheme() {
+                const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+                this.setTheme(newTheme);
+                this.showNotification(`Switched to ${newTheme} theme`, 'success');
+            }
+
+            showNotification(message, type = 'info', duration = 3000) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                
+                const iconMap = {
+                    'success': 'check-circle',
+                    'error': 'x-circle',
+                    'warning': 'alert-triangle',
+                    'info': 'info'
+                };
+                
+                notification.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="${iconMap[type] || 'info'}" class="w-4 h-4"></i>
+                        <span style="font-size: 14px; color: var(--text-primary);">${message}</span>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, duration);
+            }
+
+            addSampleMarketData() {
+                const marketOverview = document.getElementById('market-overview');
+                if (!marketOverview) return;
+                
+                const marketData = [
+                    { name: 'NIFTY 50', value: '22,458.10', change: '+0.85%', positive: true },
+                    { name: 'BANK NIFTY', value: '48,127.30', change: '-0.42%', positive: false },
+                    { name: 'SENSEX', value: '74,239.15', change: '+1.12%', positive: true }
+                ];
+                
+                marketOverview.innerHTML = '';
+                
+                marketData.forEach(item => {
+                    const marketItem = document.createElement('div');
+                    marketItem.className = 'market-item';
+                    marketItem.innerHTML = `
+                        <div class="market-name">${item.name}</div>
+                        <div class="market-price">${item.value}</div>
+                        <div class="market-change ${item.positive ? 'positive' : 'negative'}">
+                            ${item.change}
+                        </div>
+                    `;
+                    marketOverview.appendChild(marketItem);
+                });
+            }
+
+            addSampleChatHistory() {
+                const chatHistory = document.getElementById('chat-history');
+                if (!chatHistory) return;
+                
+                const sampleChats = [
+                    'Portfolio Analysis - Today',
+                    'NIFTY Options Strategy',
+                    'Fund Transfer Query',
+                    'Order Status Check'
+                ];
+
+                chatHistory.innerHTML = '';
+                
+                sampleChats.forEach(title => {
+                    const historyItem = document.createElement('button');
+                    historyItem.className = 'history-item';
+                    historyItem.textContent = title;
+                    historyItem.onclick = () => {
+                        this.showNotification(`Loading ${title}...`, 'info');
+                    };
+                    chatHistory.appendChild(historyItem);
+                });
+            }
+
+            getPortfolio() {
+                this.quickMessage('Show my portfolio and holdings with performance metrics');
+            }
+
+            getFunds() {
+                this.quickMessage('Show my available funds and margin details');
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.tradingAssistant = new TradingAssistant();
+        });
+
+        // Global functions for HTML onclick handlers
+        function startNewChat() {
+            window.tradingAssistant?.startNewChat();
+        }
+
+        function clearChat() {
+            window.tradingAssistant?.clearChat();
+        }
+
+        function toggleConnection() {
+            window.tradingAssistant?.toggleConnection();
+        }
+
+        function quickMessage(message) {
+            window.tradingAssistant?.quickMessage(message);
+        }
+
+        function getPortfolio() {
+            window.tradingAssistant?.getPortfolio();
+        }
+
+        function getFunds() {
+            window.tradingAssistant?.getFunds();
+        }
+
+        // Add CSS for data items
+        const style = document.createElement('style');
+        style.textContent = `
+            .data-item {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                padding: 8px 12px;
+                margin: 4px 0;
+                font-size: 13px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .data-item strong {
+                color: var(--text-secondary);
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-right: 8px;
+            }
+            
+            .data-item code {
+                background: var(--primary-color);
+                color: white;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Monaco', 'Menlo', monospace;
+                font-size: 11px;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

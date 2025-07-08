@@ -1,12 +1,15 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/marketcalls-openalgo-mcp-badge.png)](https://mseep.ai/app/marketcalls-openalgo-mcp)
+
 # OpenAlgo MCP - AI Trading Assistant
 
-An AI-powered trading assistant platform for OpenAlgo, leveraging Machine Conversation Protocol (MCP) and Large Language Models to provide intelligent trading capabilities.
+An AI-powered trading assistant platform for OpenAlgo, leveraging Machine Conversation Protocol (MCP) and Large Language Models to provide intelligent trading capabilities through a modern web interface.
 
 ## Overview
 
 OpenAlgo MCP integrates the powerful OpenAlgo trading platform with advanced AI capabilities through:
 1. An MCP server that exposes OpenAlgo API functions as tools for AI interaction
-2. An intelligent client application providing a conversational interface for trading
+2. A web-based client application providing a conversational interface for trading
+3. Modern UI with real-time updates via WebSockets
 
 This bridge between OpenAlgo's trading capabilities and AI allows for a natural language interface to complex trading operations, making algorithmic trading more accessible to users of all technical backgrounds.
 
@@ -33,18 +36,31 @@ This bridge between OpenAlgo's trading capabilities and AI allows for a natural 
 - Guided assistance for complex trading operations
 - Real-time data presentation in human-readable formats
 
+### Modern Web Interface
+
+- Responsive design with light/dark mode support
+- Real-time WebSocket communication
+- Markdown rendering for better readability
+- Quick action buttons for common operations
+- Connection status monitoring
+
 ## Project Structure
 
 ```
 openalgo-mcp/
-├── .env                 # Common environment configuration
+├── .env                 # Environment configuration
 ├── .env.example         # Example configuration template
-├── requirements.txt     # Common dependencies for both client and server
+├── requirements.txt     # Project dependencies
 ├── LICENSE              # MIT License
 ├── server/              # MCP Server implementation
-│   ├── server.py        # OpenAlgo MCP server code
-└── client/              # Client implementation
-    ├── trading_agent.py # AI assistant client code
+│   └── server.py        # FastMCP server exposing OpenAlgo API
+└── client/              # Web Client implementation
+    ├── app.py           # FastAPI web application
+    ├── templates/       # HTML templates
+    │   └── index.html   # Main UI template
+    └── static/          # Static assets
+        ├── script.js    # Client-side JavaScript
+        └── style.css    # CSS styles
 ```
 
 ## Installation Guide
@@ -59,7 +75,7 @@ openalgo-mcp/
 
 ```bash
 git clone https://github.com/marketcalls/openalgo-mcp.git
-cd openalgo-mcp/mcpserver
+cd openalgo-mcp
 ```
 
 ### Step 2: Set Up Environment
@@ -67,7 +83,10 @@ cd openalgo-mcp/mcpserver
 ```bash
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows:
+venv\Scripts\activate
+# On Linux/Mac:
+# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -80,8 +99,14 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Edit the .env file with your API keys and settings
-# vim .env or use any text editor
+# Use your preferred text editor
 ```
+
+Required environment variables:
+- `OPENALGO_API_KEY`: Your OpenAlgo API key
+- `OPENALGO_API_HOST`: OpenAlgo API host (default: http://127.0.0.1:5000)
+- `OPENAI_API_KEY`: OpenAI API key for the AI assistant
+- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4o)
 
 ## Usage
 
@@ -98,17 +123,18 @@ The server supports the following options:
 - `--port`: Server port (default: 8001)
 - `--mode`: Server transport mode - 'stdio' or 'sse' (default: sse)
 
-### Starting the Trading Assistant Client
+### Starting the Web UI Client
 
 ```bash
 cd client
-python trading_agent.py
+python app.py
 ```
 
-The client supports these options:
-- `--host`: MCP server host (default: from .env)
-- `--port`: MCP server port (default: from .env)
-- `--model`: OpenAI model to use (default: from .env)
+This will start the web interface on http://localhost:8000 by default.
+
+You can then access the trading assistant through your web browser.
+
+The client application will automatically connect to the MCP server as configured in the .env file.
 
 ## Configuration
 
@@ -159,18 +185,21 @@ The OpenAlgo MCP implementation provides comprehensive API coverage including:
 
 The implementation uses FastMCP with SSE (Server-Sent Events) transport for real-time communication and includes proper error handling, logging, and parameter validation.
 
-## Server Implementation Details
+## Technical Implementation
+
+### Server Implementation
 
 The OpenAlgo MCP Server is built using the FastMCP library and exposes OpenAlgo trading functionality through a comprehensive set of tools. It uses Server-Sent Events (SSE) as the primary transport mechanism for real-time communication.
 
-### Server Architecture
+#### Server Architecture
 
 - **Framework**: Uses FastMCP with Starlette for the web server
 - **Transport**: Server-Sent Events (SSE) for real-time bidirectional communication
 - **API Client**: Wraps the OpenAlgo API with appropriate error handling and logging
 - **Configuration**: Uses environment variables with command-line override capabilities
+- **Health Endpoint**: Supports /health endpoint for client health checks
 
-### Available API Tools
+#### Available API Tools
 
 The server exposes over 15 trading-related tools, including:
 
@@ -180,23 +209,29 @@ The server exposes over 15 trading-related tools, including:
 - **Account Information**: get_funds, get_holdings, get_position_book, get_order_book, get_trade_book
 - **Symbol Information**: get_symbol_metadata, get_all_tickers
 
-## Client Implementation Details
+### Web Client Implementation
 
-The Trading Assistant client provides a user-friendly interface to interact with the OpenAlgo platform through natural language. It uses OpenAI's language models to interpret user commands and invoke the appropriate trading functions.
+The Trading Assistant web client provides a user-friendly interface to interact with the OpenAlgo platform through natural language. It uses OpenAI's language models to interpret user commands and invoke the appropriate trading functions.
 
-### Client Architecture
+#### Client Architecture
 
-- **Framework**: Uses Agno agent framework with OpenAI Chat models
-- **UI**: Rich console interface with custom styling for an enhanced terminal experience
+- **Framework**: FastAPI web server with WebSocket support
+- **MCP Client**: Uses MCP's SSE client for communicating with the server
+- **LLM Integration**: Uses the Agno agent framework with OpenAI Chat models
+- **UI**: Modern web interface built with HTML, CSS, and JavaScript
 - **Symbol Helper**: Built-in utilities for correct symbol formatting across exchanges
 - **Error Handling**: Comprehensive exception handling with user-friendly feedback
 
-### Trading Assistant Capabilities
+#### Web UI Features
 
-- **Natural Language Interface**: Understands trading terminology and concepts
-- **Symbol Format Assistance**: Helps construct proper symbol formats for equities, futures, and options
-- **Data Presentation**: Formats market data in clean, readable formats
-- **Contextual Awareness**: Maintains conversation history to provide contextual responses
+- **Real-time Chat**: WebSocket-based real-time communication
+- **Theme Support**: Light and dark mode themes
+- **Quick Actions**: Pre-defined buttons for common operations
+- **Markdown Rendering**: Format AI responses with proper markdown styling
+- **Connection Status**: Visual indicators for server connection state
+- **Responsive Design**: Works on desktop and mobile devices
+- **Auto-scrolling**: Messages automatically scroll into view
+- **Message History**: Maintains conversation context for better interactions
 
 ## Troubleshooting Guide
 
