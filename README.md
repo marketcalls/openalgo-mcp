@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/marketcalls-openalgo-mcp-badge.png)](https://mseep.ai/app/marketcalls-openalgo-mcp)
+
 # OpenAlgo MCP - AI Trading Assistant
 
 An AI-powered trading assistant platform for OpenAlgo, leveraging Machine Conversation Protocol (MCP) and Large Language Models to provide intelligent trading capabilities through a modern web interface.
