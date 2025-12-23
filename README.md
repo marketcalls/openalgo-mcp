@@ -16,9 +16,11 @@ This bridge between OpenAlgo's trading capabilities and AI allows for a natural 
 
 - **Order Management**: Place, modify, and cancel orders with support for various order types (market, limit, stop-loss)
 - **Advanced Order Types**: Basket orders, split orders, and smart orders with position sizing
-- **Market Data Access**: Real-time quotes, market depth, and historical data
+- **Options Trading**: Single-leg and multi-leg options orders with ATM/ITM/OTM offset support
+- **Market Data Access**: Real-time quotes, multi-quotes, market depth, option chains, and historical data
 - **Portfolio Management**: Track holdings, positions, order books, and trade history
-- **Account Information**: Monitor funds, margins, and trading limits
+- **Account Information**: Monitor funds, margins, margin calculator, and trading limits
+- **Utilities**: Trading holidays, market timings, Telegram alerts, analyzer mode
 
 ### Intelligent Symbol Format Handling
 
@@ -133,29 +135,53 @@ The project uses a unified configuration approach with environment variables:
 The OpenAlgo MCP implementation provides comprehensive API coverage including:
 
 1. **Order Management**:
-   - `place_order`: Standard order placement
+   - `place_order`: Standard order placement with target, stoploss, trailing_sl support
    - `modify_order`: Order modification with parameter validation
    - `cancel_order`: Order cancellation by ID
+   - `cancel_all_orders`: Cancel all orders for a strategy
+   - `get_order_status`: Get status of a specific order
 
 2. **Advanced Order Types**:
    - `place_basket_order`: Place multiple orders simultaneously
    - `place_split_order`: Split large orders into smaller chunks
    - `place_smart_order`: Position-aware order placement
 
-3. **Market Data**:
+3. **Options Trading**:
+   - `place_options_order`: Single-leg options with ATM/ITM/OTM offset
+   - `place_options_multi_order`: Multi-leg strategies (spreads, iron condor, straddles)
+   - `get_option_symbol`: Get option symbol for specific strike and expiry
+   - `get_option_chain`: Real-time option chain with all strikes
+   - `get_option_greeks`: Calculate delta, gamma, theta, vega, rho
+   - `get_synthetic_future`: Calculate synthetic future using put-call parity
+
+4. **Market Data**:
    - `get_quote`: Latest market quotes
+   - `get_multi_quotes`: Quotes for multiple symbols in single request
    - `get_depth`: Order book depth data
    - `get_history`: Historical price data with various timeframes
+   - `search_instruments`: Search instruments by name or symbol
+   - `get_expiry_dates`: Get derivative expiry dates
+   - `get_instruments`: Download all instruments for an exchange
 
-4. **Account Information**:
+5. **Account Information**:
    - `get_funds`: Available funds and margin
    - `get_holdings`: Portfolio holdings
    - `get_position_book`, `get_order_book`, `get_trade_book`: Trading records
+   - `get_open_position`: Get position for specific symbol
+   - `close_all_positions`: Close all positions for a strategy
+   - `calculate_margin`: Calculate margin requirements
 
-5. **Symbol Information**:
+6. **Symbol Information**:
    - `get_symbol_metadata`: Detailed symbol information
    - `get_all_tickers`: Available trading symbols
    - `get_intervals`: Supported timeframes for historical data
+
+7. **Utilities**:
+   - `get_holidays`: Trading holidays for a year
+   - `get_timings`: Exchange trading timings for a date
+   - `send_telegram_alert`: Send Telegram notifications
+   - `analyzer_status`: Get analyzer mode status
+   - `analyzer_toggle`: Toggle between analyze (simulated) and live mode
 
 The implementation uses FastMCP with SSE (Server-Sent Events) transport for real-time communication and includes proper error handling, logging, and parameter validation.
 
@@ -172,13 +198,15 @@ The OpenAlgo MCP Server is built using the FastMCP library and exposes OpenAlgo 
 
 ### Available API Tools
 
-The server exposes over 15 trading-related tools, including:
+The server exposes over 35 trading-related tools, including:
 
-- **Order Management**: place_order, modify_order, cancel_order, get_order_status
+- **Order Management**: place_order, modify_order, cancel_order, cancel_all_orders, get_order_status
 - **Advanced Orders**: place_basket_order, place_split_order, place_smart_order
-- **Market Data**: get_quote, get_depth, get_history, get_intervals
-- **Account Information**: get_funds, get_holdings, get_position_book, get_order_book, get_trade_book
+- **Options Trading**: place_options_order, place_options_multi_order, get_option_symbol, get_option_chain, get_option_greeks, get_synthetic_future
+- **Market Data**: get_quote, get_multi_quotes, get_depth, get_history, get_intervals, search_instruments, get_expiry_dates, get_instruments
+- **Account Information**: get_funds, get_holdings, get_position_book, get_order_book, get_trade_book, get_open_position, close_all_positions, calculate_margin
 - **Symbol Information**: get_symbol_metadata, get_all_tickers
+- **Utilities**: get_holidays, get_timings, send_telegram_alert, analyzer_status, analyzer_toggle
 
 ## Client Implementation Details
 
